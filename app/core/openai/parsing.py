@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import math
+from collections.abc import Mapping
 from typing import cast
 
 from pydantic import TypeAdapter, ValidationError
@@ -58,6 +59,17 @@ def parse_websocket_event_payload(text: str) -> dict[str, JsonValue] | None:
     except (json.JSONDecodeError, ValueError):
         return None
     return cast(dict[str, JsonValue], payload) if isinstance(payload, dict) else None
+
+
+def websocket_event_payload_has_finite_numbers(value: JsonValue) -> bool:
+    """Apply opaque-parser number rules to an already-decoded native object."""
+    if isinstance(value, float):
+        return math.isfinite(value)
+    if isinstance(value, list):
+        return all(websocket_event_payload_has_finite_numbers(child) for child in value)
+    if isinstance(value, Mapping):
+        return all(websocket_event_payload_has_finite_numbers(child) for child in value.values())
+    return True
 
 
 def classify_event_type(payload: JsonValue | None) -> str | None:

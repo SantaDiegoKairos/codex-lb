@@ -12,7 +12,12 @@ must settle the same request as its compact equivalent.
 
 ## Boundaries and risks
 
-Malformed/non-object frames still have no classified response identity.
+Malformed/non-object frames still have no classified response identity and are
+dropped before entering the parsed-event relay, rather than forwarded as raw SSE.
+For native-interpreted objects, check nested float values for finiteness without
+re-parsing the message text. Opaque frames use the existing strict JSON callbacks.
+Rejected data does not acquire lifecycle ownership; the existing acknowledgement
+timeout remains in effect if no valid frame follows.
 Existing tests equating multiline WebSocket JSON with a single SSE data line
 must change, but actual SSE tests must retain their semantics.
 Tests use synthetic errors and baseline route fixtures, not live payloads.
