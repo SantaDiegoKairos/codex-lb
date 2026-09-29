@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 from typing import cast
 
 from pydantic import TypeAdapter, ValidationError
@@ -35,11 +36,26 @@ _LIFECYCLE_EVENT_TYPES = frozenset(
 )
 
 
+def _reject_non_finite_json_float(value: str) -> float:
+    parsed = float(value)
+    if not math.isfinite(parsed):
+        raise ValueError("non-finite JSON number")
+    return parsed
+
+
+def _reject_non_finite_json_constant(_value: str) -> float:
+    raise ValueError("non-finite JSON number")
+
+
 def parse_websocket_event_payload(text: str) -> dict[str, JsonValue] | None:
     """Decode a complete WebSocket JSON object, not an SSE data line."""
     try:
-        payload = json.loads(text)
-    except json.JSONDecodeError:
+        payload = json.loads(
+            text,
+            parse_float=_reject_non_finite_json_float,
+            parse_constant=_reject_non_finite_json_constant,
+        )
+    except (json.JSONDecodeError, ValueError):
         return None
     return cast(dict[str, JsonValue], payload) if isinstance(payload, dict) else None
 
