@@ -24,10 +24,11 @@ from app.core.clients.native_egress import (
     NativeEgressWebSocket,
     NativeWebSocketMessage,
     SubprocessNativeEgressClient,
-    _NATIVE_WEBSOCKET_MESSAGE_QUEUE_BYTES_LIMIT,
 )
 
 pytestmark = pytest.mark.unit
+
+_EXPECTED_MESSAGE_QUEUE_BYTES_LIMIT = 32 * 1024 * 1024
 
 
 async def _noop_abort(*args: object, **kwargs: object) -> None:
@@ -77,7 +78,7 @@ async def test_completed_message_byte_budget_trips_before_count_limit() -> None:
         for _ in range(64):
             websocket._queue_message(NativeWebSocketMessage(kind="text", text=chunk))
     # Draining resets the budget so the next lone message fits again.
-    assert websocket._messages_bytes <= _NATIVE_WEBSOCKET_MESSAGE_QUEUE_BYTES_LIMIT
+    assert websocket._messages_bytes <= _EXPECTED_MESSAGE_QUEUE_BYTES_LIMIT
 
 
 @pytest.mark.asyncio
@@ -114,6 +115,7 @@ async def test_small_binary_keeps_single_event_shape() -> None:
     message = await websocket.receive()
     assert message.kind == "binary"
     assert message.data == b"hello-binary"
+    assert getattr(websocket, "_binary_fragments", None) == []
 
 
 @pytest.mark.asyncio
